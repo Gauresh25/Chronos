@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -8,6 +8,19 @@ import DraggableEvent from './DraggableEvent';
 import { WeatherIcon } from './WeatherIcon';
 import { useWeather } from '../hooks/useWeather';
 import { useHolidays } from '../hooks/useHolidays';
+
+const floatingBoxStyles = `
+@keyframes float-box {
+  0% {
+    transform: perspective(1000px) rotateX(1deg) rotateY(1deg) translateZ(10px);
+  }
+  50% {
+    transform: perspective(1000px) rotateX(-1deg) rotateY(-1deg) translateZ(15px);
+  }
+  100% {
+    transform: perspective(1000px) rotateX(1deg) rotateY(1deg) translateZ(10px);
+  }
+}`;
 
 interface CalendarProps {
   selectedDate: Date;
@@ -25,17 +38,22 @@ const Calendar: React.FC<CalendarProps> = ({
   const { getWeather } = useWeather(selectedDate);
   const { isHoliday } = useHolidays(selectedDate);
   
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = floatingBoxStyles;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
+
   const calendarDays = getCalendarDays(selectedDate);
   const today = new Date();
 
   const handlePreviousMonth = () => {
-    const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
-    onDateSelect(newDate);
+    onDateSelect(new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
-    onDateSelect(newDate);
+    onDateSelect(new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1));
   };
 
   const getDayEvents = (date: Date): CalendarEvent[] => {
@@ -44,32 +62,42 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const isWeekend = (date: Date): boolean => {
     const day = date.getDay();
-    return day === 0 || day === 6; // 0 is Sunday, 6 is Saturday
+    return day === 0 || day === 6;
   };
 
   return (
-    <Card className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">
+    <Card className="p-6 bg-stone-200 border-olive-600">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-stone-800">
           {selectedDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
         </h2>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-            <ChevronLeft className="h-4 w-4" />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handlePreviousMonth}
+            className="bg-stone-300 hover:bg-stone-400 border-stone-400"
+          >
+            <ChevronLeft className="h-4 w-4 text-stone-600" />
           </Button>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
-            <ChevronRight className="h-4 w-4" />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleNextMonth}
+            className="bg-stone-300 hover:bg-stone-400 border-stone-400"
+          >
+            <ChevronRight className="h-4 w-4 text-stone-600" />
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-4">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
           <div 
             key={day} 
             className={`
-              text-center p-2 font-semibold text-sm
-              ${day === 'Sun' || day === 'Sat' ? 'text-red-500' : ''}
+              text-center p-2 font-medium text-sm
+              ${day === 'Sun' || day === 'Sat' ? 'text-stone-600' : 'text-stone-700'}
             `}
           >
             {day}
@@ -84,6 +112,9 @@ const Calendar: React.FC<CalendarProps> = ({
           const weather = getWeather(date);
           const holiday = isHoliday(date);
           const weekend = isWeekend(date);
+          
+          const delay = -(index * 0.05);
+          const duration = 3 + (Math.random() * 0.5);
 
           return (
             <div
@@ -91,44 +122,51 @@ const Calendar: React.FC<CalendarProps> = ({
               onClick={() => onDateSelect(date)}
               onDragOver={(e) => {
                 e.preventDefault();
-                e.currentTarget.classList.add('bg-blue-50');
+                e.currentTarget.classList.add('scale-105');
               }}
               onDragLeave={(e) => {
-                e.currentTarget.classList.remove('bg-blue-50');
+                e.currentTarget.classList.remove('scale-105');
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                e.currentTarget.classList.remove('bg-blue-50');
-                
+                e.currentTarget.classList.remove('scale-105');
                 try {
                   const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
                   const { event, sourceDate } = dragData;
-                  
                   const sourceDateTime = new Date(sourceDate);
                   const timeDiff = date.getTime() - sourceDateTime.getTime();
-                  
                   const updatedEvent = {
                     ...event,
                     start: new Date(new Date(event.start).getTime() + timeDiff),
                     end: new Date(new Date(event.end).getTime() + timeDiff),
                   };
-                  
                   onEventUpdate(updatedEvent);
                 } catch (error) {
                   console.error('Error dropping event:', error);
                 }
               }}
               className={`
-                min-h-28 p-1 border border-gray-200 relative
-                ${isCurrentMonth ? weekend ? 'bg-gray-50' : 'bg-white' : 'bg-gray-100'}
-                ${isTodayDate ? 'bg-blue-50 border-blue-500 font-semibold' : ''}
-                ${isSelectedDate ? 'ring-2 ring-blue-500' : ''}
-                hover:bg-gray-50 cursor-pointer
-                transition-colors duration-200
+                min-h-28 p-2 rounded-lg
+                transform-gpu transition-all duration-300
+                ${isCurrentMonth ? weekend ? 'bg-stone-100' : 'bg-stone-50' : 'bg-stone-200/50'}
+                ${isTodayDate ? 'bg-olive-100 border-olive-600 border-2' : 'border border-stone-300'}
+                ${isSelectedDate ? 'ring-2 ring-olive-500' : ''}
+                hover:scale-105 cursor-pointer
+                shadow-md hover:shadow-lg
+                backdrop-blur-sm
               `}
+              style={{
+                animation: `float-box ${duration}s ease-in-out infinite`,
+                animationDelay: `${delay}s`,
+                transformStyle: 'preserve-3d',
+              }}
             >
-              <div className="flex justify-between items-start p-1">
-                <span className={`text-sm ${weekend ? 'text-red-500 font-medium' : ''}`}>
+              <div className="flex justify-between items-start">
+                <span className={`
+                  text-sm font-medium
+                  ${!isCurrentMonth ? 'text-stone-500' : weekend ? 'text-stone-700 font-semibold' : 'text-stone-700'}
+                  ${isTodayDate ? 'text-olive-800' : ''}
+                `}>
                   {date.getDate()}
                 </span>
                 {weather && (
@@ -138,9 +176,9 @@ const Calendar: React.FC<CalendarProps> = ({
                   >
                     <WeatherIcon 
                       condition={weather.condition} 
-                      className="w-5 h-5 text-gray-600"
+                      className="w-5 h-5 text-stone-600"
                     />
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-stone-600">
                       {weather.temperature}°
                     </span>
                   </span>
