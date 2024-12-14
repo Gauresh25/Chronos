@@ -82,9 +82,9 @@ const EventForm: React.FC<EventFormProps> = ({
     onClose();
   };
 
-  const formatDateTimeForInput = (date: Date) => {
-    return date.toISOString().slice(0, 16);
-  };
+  // const formatDateTimeForInput = (date: Date) => {
+  //   return date.toISOString().slice(0, 16);
+  // };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

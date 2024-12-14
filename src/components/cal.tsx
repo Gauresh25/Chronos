@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-reac
 import { CalendarEvent } from '../types';
 import { getCalendarDays, isSameDay } from '../utils/dateUtils';
 import DraggableEvent from './DraggableEvent';
-import { WeatherIcon } from './WeatherIcon';
+import { WeatherIcon } from './Weathericon';
 import { useWeather } from '../hooks/useWeather';
 import { useHolidays } from '../hooks/useHolidays';
 
